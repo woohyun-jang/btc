@@ -1,0 +1,4 @@
+project_id = "btc"
+
+[functions.game]
+verify_jwt = false
