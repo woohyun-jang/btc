@@ -24,8 +24,9 @@ assert.equal(rooms.length, 10);
 
 test("entry, server progress, completion lock, full public ranking and realtime UI", async (t) => {
   const server = http.createServer((req, res) => {
-    const file =
-      req.url === "/game-config.js" ? "game-config.js" : "index.html";
+    const file = ["/game-config.js", "/bgm.js"].includes(req.url)
+      ? req.url.slice(1)
+      : "index.html";
     res.setHeader(
       "Content-Type",
       file.endsWith(".js") ? "text/javascript" : "text/html",
@@ -161,9 +162,49 @@ test("entry, server progress, completion lock, full public ranking and realtime 
   }
   const context = await browser.newContext();
   await setup(context);
+  await context.addInitScript(() => {
+    const NativeAudioContext = window.AudioContext;
+    window.audioContexts = [];
+    window.AudioContext = class extends NativeAudioContext {
+      constructor(...args) {
+        super(...args);
+        window.audioContexts.push(this);
+      }
+    };
+  });
   const page = await context.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(url);
+  assert.equal(await page.evaluate(() => window.audioContexts.length), 0);
+  await page.locator("#intro-dialog [data-bgm]").click();
+  await page.waitForFunction(
+    () =>
+      window.audioContexts[0]?.state === "running" &&
+      [...document.querySelectorAll("[data-bgm]")].every(
+        (b) => b.getAttribute("aria-pressed") === "true" && !b.disabled,
+      ),
+  );
+  await page.locator("#intro-dialog [data-bgm]").click();
+  await page.waitForFunction(
+    () =>
+      window.audioContexts[0]?.state === "suspended" &&
+      [...document.querySelectorAll("[data-bgm]")].every(
+        (b) => b.getAttribute("aria-pressed") === "false" && !b.disabled,
+      ),
+  );
+  await page.locator("#intro-dialog [data-bgm]").click();
+  await page.waitForFunction(
+    () =>
+      window.audioContexts[0]?.state === "running" &&
+      !document.querySelector("[data-bgm]").disabled,
+  );
+  assert.equal(await page.evaluate(() => window.audioContexts.length), 1);
+  await page.locator("#intro-dialog [data-bgm]").click();
+  await page.waitForFunction(
+    () =>
+      window.audioContexts[0]?.state === "suspended" &&
+      !document.querySelector("[data-bgm]").disabled,
+  );
   async function enter(page, id, name) {
     await page.locator("#student-id").fill(id);
     await page.locator("#student-name").fill(name);
@@ -350,6 +391,12 @@ test("unconfigured deployment prevents entry", async (t) => {
     r.fulfill({
       contentType: "text/javascript",
       body: 'window.GAME_CONFIG={supabaseUrl:"",publishableKey:""};',
+    }),
+  );
+  await page.route("**/bgm.js", (r) =>
+    r.fulfill({
+      contentType: "text/javascript",
+      body: fs.readFileSync(path.join(root, "bgm.js"), "utf8"),
     }),
   );
   await page.goto("http://localhost:54399/");

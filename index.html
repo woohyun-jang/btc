@@ -1164,6 +1164,41 @@
       .ranking-description {
         font-size: 14px;
       }
+      .bgm-toggle {
+        white-space: nowrap;
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+      .bgm-toggle[aria-pressed="true"] {
+        color: var(--mint);
+        border-color: #507b6e;
+      }
+      .bgm-entry {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        margin: 18px 0;
+      }
+      .bgm-entry small {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      #bgm-status {
+        margin: 0;
+        font-size: 12px;
+        color: var(--amber);
+      }
+      @media (max-width: 600px) {
+        header {
+          flex-wrap: wrap;
+          height: auto;
+          padding: 16px 0;
+        }
+        .header-tools {
+          flex-wrap: wrap;
+        }
+      }
       .ranking-filter {
         display: flex;
         align-items: center;
@@ -1258,6 +1293,14 @@
           </div>
         </div>
         <div class="header-tools">
+          <button
+            class="secondary bgm-toggle"
+            type="button"
+            data-bgm
+            aria-pressed="false"
+          >
+            ♪ BGM 켜기
+          </button>
           <div class="timer" aria-label="플레이 시간">
             <svg class="icon" aria-hidden="true"><use href="#clock-icon" /></svg
             ><span class="timer-label">플레이 시간</span
@@ -1497,6 +1540,17 @@
           >시간 제한은 없어요. 차근차근 풀어보세요.
         </li>
       </ul>
+      <div class="bgm-entry">
+        <button
+          class="secondary bgm-toggle"
+          type="button"
+          data-bgm
+          aria-pressed="false"
+        >
+          ♪ BGM 켜기</button
+        ><small>미스터리한 배경 음악과 함께 플레이해보세요.</small>
+        <p id="bgm-status" role="status"></p>
+      </div>
       <form id="entry-form" class="entry-form" novalidate>
         <label for="student-id">학번</label>
         <input
@@ -1575,6 +1629,14 @@
         ×
       </button>
       <p class="eyebrow">LIVE LEADERBOARD</p>
+      <button
+        class="secondary bgm-toggle"
+        type="button"
+        data-bgm
+        aria-pressed="false"
+      >
+        ♪ BGM 켜기
+      </button>
       <h2 id="ranking-title">오늘의 칼퇴근 랭킹</h2>
       <p class="ranking-description">
         완료까지 걸린 시간이 짧은 순서입니다. 힌트 사용에 시간 벌점은 없어요.
@@ -1678,6 +1740,7 @@
         alt="열린 집의 문 너머 가족이 함께 저녁을 보내고 있습니다."
       />
     </div>
+    <script src="bgm.js"></script>
     <script src="game-config.js"></script>
     <script>
       const rooms = [
