@@ -89,7 +89,13 @@ test("entry, server progress, completion lock, full public ranking and realtime 
           status = 409;
           result = { error: { code, message } };
         };
-        if (p.action === "ranking") result = { entries };
+        if (p.action === "ranking")
+          result = {
+            classes: [...new Set(entries.map((e) => e.studentId.slice(0, 3)))],
+            entries: entries.filter(
+              (e) => !p.classPrefix || e.studentId.startsWith(p.classPrefix),
+            ),
+          };
         else if (p.action === "enter") {
           let a = attempts.get(p.studentId);
           if (a && a.token !== p.sessionToken)
@@ -260,9 +266,58 @@ test("entry, server progress, completion lock, full public ranking and realtime 
   await page.waitForFunction(
     () => document.querySelectorAll("#ranking-body tr").length === 2,
   );
+  await page.locator("#ranking-class").selectOption("999");
+  await page.waitForFunction(
+    () =>
+      document.querySelectorAll("#ranking-body tr").length === 1 &&
+      document.querySelector("#ranking-body").textContent.includes("99999"),
+  );
+  assert.equal(
+    await page.locator("#ranking-body tr td").first().textContent(),
+    "1",
+  );
+  assert.match(
+    await page.locator("#ranking-class option:checked").textContent(),
+    /9학년 99반/,
+  );
+  entries.push({
+    id: "3",
+    studentId: "99998",
+    name: "같은 반",
+    elapsedMs: 190000,
+    hintsUsed: 0,
+    completedAt: "2026-10-01T00:04:00Z",
+  });
+  await page.evaluate(() => window.rankEvent());
+  await page.waitForFunction(
+    () => document.querySelectorAll("#ranking-body tr").length === 2,
+  );
+  assert.equal(await page.locator("#ranking-class").inputValue(), "999");
+  await page.locator("#ranking-class").selectOption("");
+  await page.waitForFunction(
+    () => document.querySelectorAll("#ranking-body tr").length === 3,
+  );
   await page.locator("#ranking-dialog [data-close]").click();
   await page.waitForFunction(() => window.removedChannels === 1);
   assert.equal(await page.evaluate(() => window.removedChannels), 1);
+  const spectatorContext = await browser.newContext();
+  await setup(spectatorContext);
+  const spectator = await spectatorContext.newPage();
+  const enterCount = requests.filter((r) => r.action === "enter").length;
+  await spectator.goto(url + "/?view=ranking");
+  await spectator.locator("#ranking-dialog").waitFor({ state: "visible" });
+  assert.equal(await spectator.locator("#intro-dialog").isVisible(), false);
+  await spectator.waitForFunction(
+    () => document.querySelectorAll("#ranking-body tr").length === 3,
+  );
+  assert.equal(requests.filter((r) => r.action === "enter").length, enterCount);
+  assert.equal(await spectator.evaluate(() => localStorage.length), 0);
+  await spectator.locator("#ranking-dialog [data-close]").click();
+  await spectator.locator("#intro-dialog").waitFor({ state: "visible" });
+  await spectator.locator("#entry-ranking").click();
+  await spectator.locator("#ranking-dialog").waitFor({ state: "visible" });
+  assert.equal(requests.filter((r) => r.action === "enter").length, enterCount);
+  await spectatorContext.close();
   for (const width of [360, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     assert.equal(

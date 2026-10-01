@@ -41,8 +41,14 @@ export function createGameHandler(database: GameDatabase, allowedOrigin: string)
       if (text.length > 4096) return failure("INVALID_REQUEST");
       const body = JSON.parse(text);
       if (!body || typeof body !== "object" || Array.isArray(body)) return failure("INVALID_REQUEST");
-      const { action, sessionToken, studentId, name, stage, answer } = body;
+      const { action, sessionToken, studentId, name, stage, answer, classPrefix } = body;
       if (!["enter", "state", "answer", "hint", "ranking"].includes(action)) return failure("INVALID_REQUEST");
+      if (action === "ranking") {
+        if (classPrefix != null && (typeof classPrefix !== "string" || !/^[0-9]{3}$/.test(classPrefix))) return failure("INVALID_REQUEST");
+        const { data, error } = await database.rpc("game_ranking", { p_class_prefix: classPrefix ?? null });
+        if (error) return failure(error.code === "P0001" && error.message ? error.message : "SERVER_ERROR");
+        return new Response(JSON.stringify(data), { status: 200, headers });
+      }
       let tokenHash: string | null = null;
       if (action !== "ranking") {
         if (typeof sessionToken !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(sessionToken)) return failure("INVALID_REQUEST");

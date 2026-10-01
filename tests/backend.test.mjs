@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { after, before, test } from 'node:test';
 import { createHash, randomBytes } from 'node:crypto';
 import { createGameHandler } from '../supabase/functions/game/handler.ts';
@@ -13,7 +13,7 @@ const quote = value => value == null ? 'null' : `'${String(value).replaceAll("'"
 const digest = token => createHash('sha256').update(token).digest('hex');
 const token = () => randomBytes(32).toString('base64url');
 const sql = async statement => (await execute('docker', ['exec', '-i', container, 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', statement], { maxBuffer: 2_000_000 })).stdout.trim();
-const request = async (action, sessionToken, values = {}) => JSON.parse(await sql(`set role service_role; select public.game_request(${quote(action)}, ${quote(sessionToken ? digest(sessionToken) : null)}, ${quote(values.studentId)}, ${quote(values.name)}, ${values.stage ?? 'null'}, ${quote(values.answer)});`));
+const request = async (action, sessionToken, values = {}) => action === 'ranking' ? JSON.parse(await sql(`set role service_role; select public.game_ranking(${quote(values.classPrefix)});`)) : JSON.parse(await sql(`set role service_role; select public.game_request(${quote(action)}, ${quote(sessionToken ? digest(sessionToken) : null)}, ${quote(values.studentId)}, ${quote(values.name)}, ${values.stage ?? 'null'}, ${quote(values.answer)});`));
 const entry = async (studentId, name = '김학생') => { const sessionToken = token(); const data = await request('enter', sessionToken, { studentId, name }); return { sessionToken, data }; };
 const answers = ['나다라가', '23', '4', '행동감정', '2', '3', '13', '900000', '2', '다라가나'];
 
@@ -24,8 +24,8 @@ before(async () => {
     catch { if (retry === 39) throw new Error('PostgreSQL did not become ready'); await new Promise(resolve => setTimeout(resolve, 250)); }
   }
   await sql('create role anon; create role authenticated; create role service_role bypassrls; create publication supabase_realtime;');
-  const migration = readFileSync(new URL('../supabase/migrations/20261001000000_game.sql', import.meta.url), 'utf8');
-  await sql(migration);
+  const directory = new URL('../supabase/migrations/', import.meta.url);
+  for (const name of readdirSync(directory).filter(name => name.endsWith('.sql')).sort()) await sql(readFileSync(new URL(name, directory), 'utf8'));
 });
 after(async () => { await execute('docker', ['rm', '-f', container]).catch(() => {}); });
 
@@ -139,10 +139,22 @@ test('ranking returns top 100 with deterministic ties', async () => {
   assert.equal(result.entries[99].id, '00000000-0000-0000-0000-000000000099');
 });
 
+
+test('class ranking filters before limiting and lists classes outside global top 100', async () => {
+  await sql("insert into game_leaderboard(student_id,name,elapsed_ms,hints_used,completed_at) values('10201','다른 반',2000000,0,now()),('10301','또 다른 반',3000000,0,now())");
+  const result = await request('ranking', null, { classPrefix: '102' });
+  assert.equal(result.entries.length, 1);
+  assert.equal(result.entries[0].studentId, '10201');
+  assert.ok(result.classes.includes('102') && result.classes.includes('103'));
+  assert.equal((await request('ranking', null, { classPrefix: '104' })).entries.length, 0);
+  await assert.rejects(request('ranking', null, { classPrefix: '1%' }), /INVALID_REQUEST/);
+  await assert.rejects(sql("set role anon; select public.game_ranking(null)"), /permission denied/);
+});
+
 test('HTTP contract validates inputs, masks database failures and sets CORS', async () => {
   let rpcCount = 0;
   let lastArgs;
-  const handler = createGameHandler({ rpc: async (name, args) => { rpcCount++; lastArgs = args; assert.equal(name, 'game_request'); return { data: { state: { nextStage: 0 } }, error: null }; } }, origin);
+  const handler = createGameHandler({ rpc: async (name, args) => { rpcCount++; lastArgs = args; assert.ok(['game_request', 'game_ranking'].includes(name)); return { data: { state: { nextStage: 0 } }, error: null }; } }, origin);
   const invoke = body => handler(new Request('https://local.test/functions/v1/game', { method: 'POST', headers: { Origin: origin }, body: JSON.stringify(body) }));
   const sessionToken = token();
   const valid = await invoke({ action: 'enter', studentId: '12345', name: ' 김학생 ', sessionToken });
@@ -153,6 +165,12 @@ test('HTTP contract validates inputs, masks database failures and sets CORS', as
   assert.ok(!JSON.stringify(lastArgs).includes(sessionToken));
   for (const body of [null, [], { action: 'reset' }, { action: 'state', sessionToken: 'invalid' }, { action: 'enter', studentId: 12345, name: '이름', sessionToken }, { action: 'answer', sessionToken, stage: 1.5, answer: '2' }, { action: 'answer', sessionToken, stage: 0, answer: 2 }]) assert.equal((await invoke(body)).status, 400);
   assert.equal(rpcCount, 1);
+  for (const classPrefix of ['1%', '10', 102, '１０２']) assert.equal((await invoke({ action: 'ranking', classPrefix })).status, 400);
+  assert.equal(rpcCount, 1);
+  assert.equal((await invoke({ action: 'ranking', classPrefix: '102' })).status, 200);
+  assert.deepEqual(lastArgs, { p_class_prefix: '102' });
+  assert.equal((await invoke({ action: 'ranking' })).status, 200);
+  assert.deepEqual(lastArgs, { p_class_prefix: null });
   const denied = await handler(new Request('https://local.test', { method: 'OPTIONS', headers: { Origin: 'https://wrong.test' } }));
   assert.equal(denied.status, 403);
   assert.equal(denied.headers.get('access-control-allow-origin'), null);

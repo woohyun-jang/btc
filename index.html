@@ -1164,6 +1164,21 @@
       .ranking-description {
         font-size: 14px;
       }
+      .ranking-filter {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 18px 0;
+      }
+      .ranking-filter select {
+        font: inherit;
+        color: var(--text);
+        background: #172c34;
+        border: 1px solid #45606a;
+        border-radius: 10px;
+        padding: 10px 14px;
+        min-width: 160px;
+      }
       .ranking-status {
         color: var(--mint);
         font-size: 13px;
@@ -1519,6 +1534,9 @@
           aria-live="polite"
         ></p>
         <div class="dialog-actions">
+          <button class="secondary" id="entry-ranking" type="button">
+            랭킹만 보기
+          </button>
           <button class="primary" id="start" type="submit">
             탈출 시작하기
           </button>
@@ -1562,6 +1580,12 @@
         완료까지 걸린 시간이 짧은 순서입니다. 힌트 사용에 시간 벌점은 없어요.
         같은 기록은 먼저 완료한 순서로 표시됩니다.
       </p>
+      <div class="ranking-filter">
+        <label for="ranking-class">학년·반</label>
+        <select id="ranking-class">
+          <option value="">전체</option>
+        </select>
+      </div>
       <p id="ranking-status" class="ranking-status" role="status"></p>
       <div class="ranking-scroll">
         <table class="ranking-table">
@@ -2413,7 +2437,26 @@
         $("ranking-refresh").disabled = true;
         $("ranking-error").textContent = "";
         try {
-          const result = await api("ranking");
+          const classPrefix = $("ranking-class").value;
+          const result = await api("ranking", {
+            classPrefix: classPrefix || null,
+          });
+          if (classPrefix !== $("ranking-class").value) {
+            rankingDirty = true;
+            return;
+          }
+          const prefixes = new Set(result.classes || []);
+          if (classPrefix) prefixes.add(classPrefix);
+          $("ranking-class").replaceChildren(new Option("전체", ""));
+          [...prefixes].sort().forEach((prefix) => {
+            $("ranking-class").append(
+              new Option(
+                `${prefix[0]}학년 ${Number(prefix.slice(1))}반`,
+                prefix,
+              ),
+            );
+          });
+          $("ranking-class").value = classPrefix;
           $("ranking-body").replaceChildren();
           result.entries.forEach((entry, index) => {
             const row = document.createElement("tr");
@@ -2431,6 +2474,9 @@
             $("ranking-body").append(row);
           });
           $("ranking-empty").hidden = result.entries.length > 0;
+          $("ranking-empty").textContent = classPrefix
+            ? "이 반에는 아직 탈출한 참가자가 없어요."
+            : "아직 탈출한 참가자가 없어요. 첫 번째 기록에 도전해보세요!";
           $("ranking-updated").textContent =
             `최근 확인 ${new Date().toLocaleTimeString("ko-KR")}`;
         } catch (error) {
@@ -2481,14 +2527,24 @@
       }
       $("ranking-dialog").addEventListener("close", () => {
         rankingGeneration++;
+        if (!started && !$("intro-dialog").open) $("intro-dialog").showModal();
         if (rankingChannel) {
           rankingClient.removeChannel(rankingChannel);
           rankingChannel = null;
         }
       });
       $("ranking").addEventListener("click", openRanking);
+      $("entry-ranking").addEventListener("click", () => {
+        $("intro-dialog").close();
+        openRanking();
+      });
       $("play-again").addEventListener("click", openRanking);
       $("ranking-refresh").addEventListener("click", refreshRanking);
+      $("ranking-class").addEventListener("change", () => {
+        $("ranking-body").replaceChildren();
+        $("ranking-empty").hidden = true;
+        refreshRanking();
+      });
       $("intro-dialog").addEventListener("cancel", (event) =>
         event.preventDefault(),
       );
@@ -2507,7 +2563,11 @@
           "입장 준비 중입니다. 선생님이 연결을 마친 뒤 다시 접속해주세요.";
         $("start").disabled = true;
       }
-      $("intro-dialog").showModal();
+      if (new URLSearchParams(location.search).get("view") === "ranking") {
+        openRanking();
+      } else {
+        $("intro-dialog").showModal();
+      }
     </script>
   </body>
 </html>

@@ -2,6 +2,12 @@
 
 학번당 한 번만 참가할 수 있습니다. 같은 브라우저에 저장한 세션으로 진행 중인 게임을 이어갈 수 있으며 완료 후에는 새 도전을 시작할 수 없습니다. 완료된 참가자의 학번, 이름, 소요 시간, 힌트 수는 공개 순위에 표시됩니다.
 
+## 랭킹 공유와 반 구분
+
+참가 입력 없이 랭킹을 열려면 https://woohyun-jang.github.io/btc/?view=ranking 을 공유합니다. 입장 화면의 ‘랭킹만 보기’ 버튼으로도 조회할 수 있으며 조회만으로 참가 기록이 생기지 않습니다.
+
+학번은 `10123 = 1학년 1반 23번` 형식으로 해석합니다. 앞 3자리(학년 1자리 + 반 2자리)를 선택하면 해당 반 안에서 순위를 표시합니다. 필터 목록은 전체 완료 기록에서 만들어 전체 상위 100명에 없는 반도 선택할 수 있습니다. 실시간 갱신 중에도 선택한 반을 유지합니다.
+
 ## 현재 운영 환경
 
 - 사이트: https://woohyun-jang.github.io/btc/
@@ -28,25 +34,25 @@ supabase functions deploy game
 
 `POST {supabaseUrl}/functions/v1/game`에 JSON을 보내며, 모든 응답에 `Cache-Control: no-store`가 적용됩니다. 클라이언트는 참가 요청 전에 무작위 32바이트를 base64url로 인코딩한 43글자 `sessionToken`을 저장합니다. 재시도에 같은 토큰을 사용해야 하며 서버에는 SHA-256 해시만 저장됩니다.
 
-| action  | 요청 필드                     | 성공 응답        |
-| ------- | ----------------------------- | ---------------- |
-| enter   | studentId, name, sessionToken | {state}          |
-| state   | sessionToken                  | {state}          |
-| answer  | sessionToken, stage, answer   | {correct, state} |
-| hint    | sessionToken, stage           | {hint, state}    |
-| ranking | 없음                          | {entries}        |
+| action  | 요청 필드                     | 성공 응답          |
+| ------- | ----------------------------- | ------------------ |
+| enter   | studentId, name, sessionToken | {state}            |
+| state   | sessionToken                  | {state}            |
+| answer  | sessionToken, stage, answer   | {correct, state}   |
+| hint    | sessionToken, stage           | {hint, state}      |
+| ranking | classPrefix(선택, 숫자 3자리) | {classes, entries} |
 
 `stage`는 0부터 9까지입니다. 학번은 숫자 5자리 문자열이며 이름은 양끝 공백 제거 후 1~40글자입니다. `state`는 `studentId`, `name`, `startedAt`, `serverNow`, `completedAt`, `elapsedMs`, `nextStage`, `hints`, `recaps`, `room`을 포함합니다. 현재 문제의 `room`에는 정답·해설·힌트가 없으며, 해결한 문제의 `recaps`에만 정답과 해설이 제공됩니다. 힌트 본문은 `hint` 요청에만 제공됩니다. 완료 후 `room`은 null이며 최종 소요 시간과 힌트 수는 고정됩니다.
 
 정답 재시도는 이미 해결한 단계에서 올바른 답일 때만 성공합니다. 힌트 재시도는 같은 단계의 힌트 수를 늘리지 않습니다. 완료 후에는 이미 기록된 힌트만 다시 조회할 수 있습니다.
 
-`entries`는 `{id, studentId, name, elapsedMs, hintsUsed, completedAt}`이며 소요 시간, 완료 시각, 무작위 ID 순으로 상위 100명을 반환합니다. 시각과 소요 시간은 PostgreSQL에서 계산합니다. 마지막 정답 처리와 공개 순위 등록은 한 트랜잭션에서 실행됩니다.
+`ranking`은 `classes`(완료 기록이 있는 학년·반의 앞 3자리 목록)와 `entries`를 반환합니다. `entries`는 `{id, studentId, name, elapsedMs, hintsUsed, completedAt}`이며 소요 시간, 완료 시각, 무작위 ID 순으로 전체 또는 선택한 반의 상위 100명을 반환합니다. 필터는 100명 제한 전에 적용합니다. 시각과 소요 시간은 PostgreSQL에서 계산합니다. 마지막 정답 처리와 공개 순위 등록은 한 트랜잭션에서 실행됩니다.
 
 오류는 `{error: {code, message}}`입니다. 입력 오류는 `INVALID_REQUEST` 400, 없는 세션은 `SESSION_NOT_FOUND` 401, 다른 기기의 진행 중 학번은 `IN_PROGRESS` 409, 완료 학번은 `COMPLETED` 409, 단계 불일치는 `STAGE_MISMATCH` 409입니다. 내부 데이터베이스 오류는 세부 내용 없이 `SERVER_ERROR` 500으로 반환합니다.
 
 ## 데이터 접근과 실시간 순위
 
-`public.game_attempts`와 `public.game_rooms`에는 RLS가 적용되며 공개 키로 읽거나 쓸 수 없습니다. RPC `game_request`와 `game_state`는 service_role만 실행할 수 있습니다. 공개 테이블 `public.game_leaderboard`에는 `id`, `student_id`, `name`, `elapsed_ms`, `hints_used`, `completed_at`만 저장되며 anon/authenticated는 읽기만 허용됩니다.
+`public.game_attempts`와 `public.game_rooms`에는 RLS가 적용되며 공개 키로 읽거나 쓸 수 없습니다. RPC `game_request`, `game_state`, `game_ranking`은 service_role만 실행할 수 있습니다. 공개 테이블 `public.game_leaderboard`에는 `id`, `student_id`, `name`, `elapsed_ms`, `hints_used`, `completed_at`만 저장되며 anon/authenticated는 읽기만 허용됩니다.
 
 Realtime에서는 `public.game_leaderboard`의 `INSERT` 이벤트를 구독한 뒤 `ranking` API를 다시 조회합니다. 참가 세션 테이블은 Realtime publication에 포함하지 않습니다.
 
