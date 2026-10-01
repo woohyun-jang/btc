@@ -1120,6 +1120,114 @@
           display: none;
         }
       }
+
+      .ranking-button {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid #41685a;
+        background: #182e30;
+        border-radius: 9px;
+        padding: 7px 12px;
+        color: var(--mint);
+        font-size: 14px;
+        white-space: nowrap;
+      }
+      .entry-form {
+        display: grid;
+        gap: 8px;
+        margin-top: 22px;
+      }
+      .entry-form label {
+        font-size: 14px;
+        margin-top: 6px;
+      }
+      .entry-form input {
+        letter-spacing: normal;
+      }
+      .entry-form .entry-info {
+        font-size: 12px;
+        line-height: 1.7;
+        margin: 7px 0;
+        color: var(--muted);
+      }
+      .entry-form .dialog-actions {
+        margin-top: 8px;
+      }
+      .completion-note {
+        font-size: 14px !important;
+        color: var(--amber) !important;
+      }
+      #ranking-dialog {
+        width: min(620px, calc(100% - 32px));
+      }
+      .ranking-description {
+        font-size: 14px;
+      }
+      .ranking-status {
+        color: var(--mint);
+        font-size: 13px;
+      }
+      .ranking-scroll {
+        overflow-x: auto;
+      }
+      .ranking-table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        text-align: left;
+        font-variant-numeric: tabular-nums;
+      }
+      .ranking-table th {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .ranking-table td,
+      .ranking-table th {
+        padding: 12px 8px;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      .ranking-table tbody tr:first-child td {
+        color: var(--mint);
+      }
+      .ranking-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .ranking-footer small {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      @media (max-width: 760px) {
+        .ranking-button {
+          padding: 6px 8px;
+          font-size: 12px;
+        }
+        .brand strong {
+          font-size: 14px;
+        }
+        .brand-icon {
+          display: none;
+        }
+        .brand small {
+          max-width: 150px;
+          letter-spacing: 0.7px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .header-tools {
+          gap: 6px;
+        }
+        .timer time {
+          font-size: 13px;
+          min-width: 40px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -1131,7 +1239,7 @@
           ></span>
           <div>
             <strong>칼퇴근을 사수하라!</strong
-            ><small>THE WORK–LIFE ESCAPE</small>
+            ><small id="participant">THE WORK–LIFE ESCAPE</small>
           </div>
         </div>
         <div class="header-tools">
@@ -1140,17 +1248,18 @@
             ><span class="timer-label">플레이 시간</span
             ><time id="timer">00:00</time>
           </div>
+          <button
+            class="ranking-button"
+            id="ranking"
+            type="button"
+            aria-haspopup="dialog"
+            aria-controls="ranking-dialog"
+          >
+            🏆 <span>랭킹</span>
+          </button>
           <button class="icon-button" id="help" aria-label="게임 방법 보기">
             <svg class="icon" aria-hidden="true">
               <use href="#help-icon" />
-            </svg></button
-          ><button
-            class="icon-button"
-            id="restart"
-            aria-label="처음부터 다시 시작"
-          >
-            <svg class="icon" aria-hidden="true">
-              <use href="#reset-icon" />
             </svg>
           </button>
         </div>
@@ -1326,7 +1435,10 @@
               >
             </div>
           </div>
-          <button class="primary" id="play-again">다시 도전하기</button>
+          <p class="completion-note">
+            완료 기록이 저장되었습니다. 동일한 학번으로는 재도전할 수 없어요.
+          </p>
+          <button class="primary" id="play-again">실시간 랭킹 보기</button>
         </section>
       </main>
       <footer class="bottom-bar">
@@ -1370,9 +1482,48 @@
           >시간 제한은 없어요. 차근차근 풀어보세요.
         </li>
       </ul>
-      <div class="dialog-actions">
-        <button class="primary" id="start" autofocus>탈출 시작하기</button>
-      </div>
+      <form id="entry-form" class="entry-form" novalidate>
+        <label for="student-id">학번</label>
+        <input
+          id="student-id"
+          name="studentId"
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]{5}"
+          maxlength="5"
+          placeholder="숫자 5자리"
+          autocomplete="off"
+          required
+          aria-describedby="entry-info entry-error"
+        />
+        <label for="student-name">이름</label>
+        <input
+          id="student-name"
+          name="name"
+          type="text"
+          maxlength="40"
+          placeholder="이름을 입력하세요"
+          autocomplete="name"
+          required
+          aria-describedby="entry-info entry-error"
+        />
+        <p id="entry-info" class="entry-info">
+          학번·이름·진행 및 완료 기록을 저장합니다. 완료 후 동일한 학번으로는
+          재도전할 수 없습니다. 완료한 참가자의 학번과 이름은 랭킹에 공개됩니다.
+          학번과 이름만으로 본인 여부를 확인하지는 않습니다.
+        </p>
+        <p
+          id="entry-error"
+          class="feedback"
+          role="status"
+          aria-live="polite"
+        ></p>
+        <div class="dialog-actions">
+          <button class="primary" id="start" type="submit">
+            탈출 시작하기
+          </button>
+        </div>
+      </form>
     </dialog>
     <dialog id="help-dialog" aria-labelledby="help-title">
       <button class="icon-button close" data-close aria-label="도움말 닫기">
@@ -1393,20 +1544,53 @@
         </li>
       </ol>
       <p>
-        띄어쓰기와 쉼표는 암호에 영향을 주지 않아요. 틀려도 시간이나 기회는
-        줄어들지 않습니다.
+        띄어쓰기와 쉼표는 암호에 영향을 주지 않아요. 오답으로 기회가 줄어들지는
+        않지만 플레이 시간은 계속 흐릅니다. 같은 브라우저에서는 학번과 이름을
+        다시 입력해 진행을 이어갈 수 있어요. 창을 닫아도 시간은 계속 흐릅니다.
       </p>
       <div class="dialog-actions">
         <button class="primary" data-close>이어서 플레이</button>
       </div>
     </dialog>
-    <dialog id="restart-dialog" aria-labelledby="restart-title">
-      <p class="eyebrow">RESTART MISSION</p>
-      <h2 id="restart-title">처음부터 도전할까요?</h2>
-      <p>획득한 키와 플레이 시간이 초기화됩니다.</p>
-      <div class="dialog-actions">
-        <button class="secondary" data-close>계속 플레이</button
-        ><button class="primary" id="confirm-restart">다시 시작</button>
+    <dialog id="ranking-dialog" aria-labelledby="ranking-title">
+      <button class="icon-button close" data-close aria-label="랭킹 닫기">
+        ×
+      </button>
+      <p class="eyebrow">LIVE LEADERBOARD</p>
+      <h2 id="ranking-title">오늘의 칼퇴근 랭킹</h2>
+      <p class="ranking-description">
+        완료까지 걸린 시간이 짧은 순서입니다. 힌트 사용에 시간 벌점은 없어요.
+        같은 기록은 먼저 완료한 순서로 표시됩니다.
+      </p>
+      <p id="ranking-status" class="ranking-status" role="status"></p>
+      <div class="ranking-scroll">
+        <table class="ranking-table">
+          <thead>
+            <tr>
+              <th scope="col">순위</th>
+              <th scope="col">학번</th>
+              <th scope="col">이름</th>
+              <th scope="col">기록</th>
+              <th scope="col">힌트</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-body"></tbody>
+        </table>
+      </div>
+      <p id="ranking-empty" hidden>
+        아직 탈출한 참가자가 없어요. 첫 번째 기록에 도전해보세요!
+      </p>
+      <p
+        id="ranking-error"
+        class="feedback"
+        role="status"
+        aria-live="polite"
+      ></p>
+      <div class="ranking-footer">
+        <small id="ranking-updated"></small
+        ><button class="secondary" id="ranking-refresh" type="button">
+          새로고침
+        </button>
       </div>
     </dialog>
     <dialog id="recap-dialog" aria-labelledby="recap-title">
@@ -1470,6 +1654,7 @@
         alt="열린 집의 문 너머 가족이 함께 저녁을 보내고 있습니다."
       />
     </div>
+    <script src="game-config.js"></script>
     <script>
       const rooms = [
         {
@@ -1490,11 +1675,7 @@
             ["다", "내일 진행될 회의 자료 미리 읽어보기"],
             ["라", "갑자기 걸려온 친구의 잡담 전화"],
           ],
-          answer: "나다라가",
           placeholder: "기호 4개를 순서대로 입력",
-          hint: "당장 반응하게 만드는 일과, 미루었을 때 손실이 커지는 일은 같을까요? 두 기준을 따로 비교해보세요.",
-          explanation:
-            "보고서(나)는 중요하고 긴급한 일, 회의 준비(다)는 중요하지만 덜 긴급한 일입니다. 잡담 전화(라)는 급하게 응답해야 하지만 덜 중요한 일, SNS(가)는 중요도와 긴급도가 모두 낮은 일입니다.",
         },
         {
           name: "일·가정 양립",
@@ -1523,11 +1704,7 @@
             ],
             ["4", "가사 노동은 돈을 벌지 않으므로 경제적 가치가 전혀 없다."],
           ],
-          answer: "23",
           placeholder: "올바른 번호 2개 입력",
-          hint: "진술 속에 예외를 모두 지워버리는 표현이 있는지 살펴보세요. 제도의 목적과 이용 범위도 구분해보세요.",
-          explanation:
-            "올바른 진술은 2번과 3번입니다. 육아기 근로시간 단축과 유연근무는 일과 돌봄을 함께하는 데 도움이 됩니다. 육아휴직은 아버지도 신청할 수 있으며, 가사 노동에는 경제적 가치가 있습니다.",
         },
         {
           name: "공평한 분담",
@@ -1559,11 +1736,7 @@
               "집안일은 시간이 남는 사람이 전담하는 것이 가장 효율적인 일·가정 양립 방법이다.",
             ],
           ],
-          answer: "4",
           placeholder: "보기에서 번호를 선택하세요",
-          hint: "겉으로 보이는 여유 시간만으로 실제 부담까지 알 수 있을까요? 문장마다 판단의 기준을 찾아보세요.",
-          explanation:
-            "가장 적절하지 않은 설명은 4번입니다. 시간이 남는다는 이유로 한 사람에게 집안일을 모두 맡기면 부담이 쏠립니다. 각자의 시간과 능력, 돌봄 부담을 함께 고려해 공평하게 분담해야 합니다.",
         },
         {
           name: "갈등 소통",
@@ -1583,11 +1756,7 @@
             ["평가", "평가"],
             ["성격", "성격"],
           ],
-          answer: "행동감정",
           placeholder: "(A), (B) 단어를 순서대로 입력",
-          hint: "같은 장면을 두 사람이 서로 다르게 받아들일 수 있어요. 문장에서 누가 무엇을 설명하는지 나누어 생각해보세요.",
-          explanation:
-            "(A)는 행동, (B)는 감정입니다. 예를 들어 “설거지가 그대로 남아 있을 때, 나는 혼자 집안일을 맡는 것 같아 지쳐. 함께 나눠 하면 좋겠어.”처럼 행동과 내 감정을 연결해서 말해보세요.",
         },
         {
           name: "업무 조율",
@@ -1616,11 +1785,7 @@
               "두 업무를 모두 수락하고 아무에게도 알리지 않은 채 밤새 처리한다.",
             ],
           ],
-          answer: "2",
           placeholder: "보기에서 번호를 선택하세요",
-          hint: "결정에 필요한 정보가 충분한지부터 점검해보세요. 선택의 결과를 누가 함께 알아야 할지도 생각해보세요.",
-          explanation:
-            "2번입니다. 마감과 중요도를 확인한 뒤 현재 업무량을 공유하고 우선순위나 기한을 조율해야 합니다. 말없이 지연시키거나 모든 요청을 일괄적으로 수락·거절하면 상황에 맞는 판단을 하기 어렵습니다.",
         },
         {
           name: "회복 시간",
@@ -1641,11 +1806,7 @@
             ["3", "19:00"],
             ["4", "19:20"],
           ],
-          answer: "3",
           placeholder: "보기에서 번호를 선택하세요",
-          hint: "총 소요 시간을 단순히 더하기 전에, 어떤 일이 다른 일의 종료를 기다려야 하는지 표시해보세요.",
-          explanation:
-            "3번, 19:00입니다. 18:00~18:30 저녁 준비 중 빨래 정리도 끝낼 수 있습니다. 이어서 18:30~18:50 함께 식사하고, 18:50~19:00 식탁을 정리하면 함께 쉴 수 있습니다.",
         },
         {
           name: "보이지 않는 일",
@@ -1677,11 +1838,7 @@
               "한 사람이 모든 일을 기억하고 다른 사람에게 매번 지시하면 역할 분담이 완성된다.",
             ],
           ],
-          answer: "13",
           placeholder: "올바른 번호 2개 입력",
-          hint: "분담표에 적힌 일의 앞뒤를 떠올려보세요. 누군가는 일을 시작하기 전에도 무언가를 하고 있을 수 있어요.",
-          explanation:
-            "1번과 3번입니다. 예약, 준비물 확인, 일정 기억, 계획과 조율에도 시간과 주의가 필요합니다. 눈에 보이는 작업 시간만 나누면 이 부담은 한 사람에게 남을 수 있습니다.",
         },
         {
           name: "노동의 가치",
@@ -1696,11 +1853,7 @@
             "가사 노동을 하루 2시간, 한 달 30일 수행했습니다. 같은 일을 맡기는 비용을 시간당 15,000원으로 가정하면 한 달의 가치는 얼마일까요? 원 단위 숫자만 입력하세요.",
           type: "number",
           options: [],
-          answer: "900000",
           placeholder: "원 단위 숫자 입력",
-          hint: "시간당 금액에 곱할 시간의 단위를 먼저 맞춰보세요. 질문은 하루의 가치가 아니라 한 달의 가치를 묻고 있어요.",
-          explanation:
-            "2시간 × 30일 × 15,000원 = 900,000원입니다. 이는 문제에서 정한 가정에 따른 계산이며, 실제 가치는 노동의 종류와 시간, 계산 기준에 따라 달라집니다.",
         },
         {
           name: "경청",
@@ -1723,11 +1876,7 @@
             ["3", "그럼 앞으로 집안일은 하지 마. 다른 이야기는 그만하자."],
             ["4", "그 정도로 힘들 리 없잖아. 내가 더 바빠."],
           ],
-          answer: "2",
           placeholder: "보기에서 번호를 선택하세요",
-          hint: "내가 하고 싶은 말을 먼저 떠올리기보다, 상대가 지금 말하고 싶은 것이 무엇인지 생각해보세요.",
-          explanation:
-            "2번입니다. 상대가 표현한 마음을 인정하고 구체적인 부담을 물으면 대화를 이어갈 수 있습니다. 곧바로 비교하거나 평가하고 대화를 끝내는 반응은 서로의 상황을 이해하기 어렵게 만듭니다.",
         },
         {
           name: "저녁의 약속",
@@ -1747,11 +1896,7 @@
             ["다", "각자의 이번 주 일정과 돌봄·집안일 부담을 공유한다."],
             ["라", "공유한 상황을 바탕으로 역할과 시간을 함께 합의한다."],
           ],
-          answer: "다라가나",
           placeholder: "기호 4개를 순서대로 입력",
-          hint: "뒤의 과정이 앞의 어떤 정보를 필요로 하는지 연결해보세요. 계획은 한 번 정하고 끝나는 것일까요?",
-          explanation:
-            "상황 공유(다) → 함께 합의(라) → 실행(가) → 점검과 조정(나) 순서입니다. 각자의 상황을 먼저 알고 계획을 정한 뒤, 실제 부담을 돌아보며 수정하면 함께 지킬 수 있는 약속이 됩니다.",
         },
       ];
       const sceneChanges = [
@@ -1769,27 +1914,132 @@
       ];
       const initialSceneArt = document.getElementById("room-art").src;
       let sceneLevel = -1;
+
       const $ = (id) => document.getElementById(id);
       let stage = 0;
       let selected = [];
       let solved = new Set();
       let hints = new Set();
-      let startedAt = null;
-      let finishedAt = null;
+      let recaps = new Map();
       let started = false;
-      const normalize = (value) =>
-        value.normalize("NFC").replace(/[\s,，·ㆍ-]/g, "");
+      let sessionToken = null;
+      let sessionState = null;
+      let timerBase = 0;
+      let timerAnchor = 0;
+      let finishedAt = null;
+      let pending = false;
+      let rankingClient = null;
+      let rankingChannel = null;
+      let rankingGeneration = 0;
+      let rankingBusy = false;
+      let rankingDirty = false;
+      let sdkPromise = null;
+      const config = window.GAME_CONFIG || {};
+      const configured =
+        /^https:\/\/[^/]+\.supabase\.co$/.test(config.supabaseUrl || "") &&
+        Boolean(config.publishableKey);
       const formatTime = (seconds) =>
         `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
       function updateTimer() {
-        const seconds =
-          startedAt === null
-            ? 0
-            : Math.floor(
-                ((finishedAt ?? performance.now()) - startedAt) / 1000,
-              );
+        const seconds = Math.floor(
+          (timerBase +
+            (started && !finishedAt ? performance.now() - timerAnchor : 0)) /
+            1000,
+        );
         $("timer").textContent = formatTime(seconds);
         return formatTime(seconds);
+      }
+      async function api(action, payload = {}) {
+        if (!configured)
+          throw new Error(
+            "입장 준비 중입니다. 선생님이 연결을 마친 뒤 다시 접속해주세요.",
+          );
+        let response;
+        try {
+          response = await fetch(`${config.supabaseUrl}/functions/v1/game`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action, ...payload }),
+            cache: "no-store",
+          });
+        } catch {
+          throw new Error(
+            "서버에 연결하지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해주세요. 진행 기록은 서버에 보관됩니다.",
+          );
+        }
+        const result = await response.json().catch(() => null);
+        if (!response.ok || !result || result.error) {
+          const message =
+            result?.error?.message ||
+            "서버가 요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요.";
+          const error = new Error(message);
+          error.code = result?.error?.code;
+          throw error;
+        }
+        return result;
+      }
+      function applyState(state) {
+        sessionState = state;
+        started = true;
+        finishedAt = state.completedAt;
+        timerBase = state.elapsedMs;
+        timerAnchor = performance.now();
+        solved = new Set(
+          Array.from({ length: state.nextStage }, (_, index) => index),
+        );
+        hints = new Set(state.hints);
+        recaps = new Map(state.recaps.map((recap) => [recap.stage, recap]));
+        if (state.room)
+          rooms[state.nextStage] = { ...rooms[state.nextStage], ...state.room };
+        $("participant").textContent = `${state.name} · 참여 중`;
+        updateTimer();
+      }
+      function setPending(value) {
+        pending = value;
+        $("check").disabled = value || solved.has(stage);
+        $("clear").disabled = value || solved.has(stage);
+        $("answer").disabled = value || solved.has(stage);
+        $("hint").disabled = value;
+        $("next").disabled = value;
+        document
+          .querySelectorAll("#puzzle-content .choice")
+          .forEach((button) => (button.disabled = value || solved.has(stage)));
+        $("check").textContent = value ? "확인 중…" : "잠금 해제";
+      }
+      function showUnlock() {
+        const recap = recaps.get(stage);
+        $("answer").value = recap.answer;
+        $("feedback").textContent = "";
+        $("hint").hidden = true;
+        $("hint-box").hidden = true;
+        $("explanation").textContent = recap.explanation;
+        $("unlock").hidden = false;
+        renderChoices();
+        updateProgress();
+        setPending(false);
+        $("next").focus({ preventScroll: true });
+        $("unlock").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+      function showSuccess(animate = true) {
+        stage = rooms.length - 1;
+        $("final-time").textContent = formatTime(
+          Math.floor(sessionState.elapsedMs / 1000),
+        );
+        $("final-hints").textContent = sessionState.hints.length;
+        $("final-keys").textContent = `${solved.size} / ${rooms.length}`;
+        updateProgress();
+        $("final-art").src = $("room-art").src;
+        $("game").hidden = true;
+        $("success").hidden = false;
+        $("main-title").textContent = "소중한 저녁을 되찾았어요.";
+        $("main-subtitle").textContent =
+          "완료 기록이 저장되었습니다. 같은 학번으로는 다시 도전할 수 없어요.";
+        $("participant").textContent = `${sessionState.name} · 완료`;
+        $("success-title").focus({ preventScroll: true });
+        if (animate) {
+          $("success").scrollIntoView({ behavior: "smooth", block: "start" });
+          celebrate();
+        }
       }
       function updateScene() {
         const level = solved.size;
@@ -1848,8 +2098,9 @@
           button.addEventListener("click", () => {
             if (solved.has(index)) {
               $("recap-title").textContent = room.title;
-              $("recap-answer").textContent = `탈출 암호 : ${room.answer}`;
-              $("recap-text").textContent = room.explanation;
+              $("recap-answer").textContent =
+                `탈출 암호 : ${recaps.get(index).answer}`;
+              $("recap-text").textContent = recaps.get(index).explanation;
               $("recap-dialog").showModal();
             }
           });
@@ -1879,7 +2130,7 @@
           button.type = "button";
           button.dataset.value = value;
           button.setAttribute("aria-pressed", String(selected.includes(value)));
-          button.disabled = solved.has(stage);
+          button.disabled = pending || solved.has(stage);
           const index = selected.indexOf(value);
           button.innerHTML =
             room.type === "words"
@@ -1891,7 +2142,7 @@
         content.append(choices);
       }
       function choose(value) {
-        if (solved.has(stage)) return;
+        if (pending || solved.has(stage) || !started) return;
         const type = rooms[stage].type;
         if (type === "single") selected = [value];
         else if (selected.includes(value))
@@ -1937,7 +2188,7 @@
         $("hint").setAttribute("aria-expanded", "false");
         $("hint").querySelector("span").textContent = "막혔나요? 힌트 보기";
         $("hint-box").hidden = true;
-        $("hint-box").textContent = room.hint;
+        $("hint-box").textContent = "";
         $("feedback").textContent = "";
         $("unlock").hidden = true;
         $("next").textContent =
@@ -1951,76 +2202,7 @@
           $("game").scrollIntoView({ behavior: "smooth", block: "start" });
         }
       }
-      $("answer").addEventListener("input", () => {
-        selected = [];
-        $("feedback").textContent = "";
-        renderChoices();
-      });
-      $("clear").addEventListener("click", () => {
-        selected = [];
-        $("answer").value = "";
-        $("feedback").textContent = "";
-        renderChoices();
-        if (!$("answer").readOnly) $("answer").focus();
-      });
-      $("answer-form").addEventListener("submit", (event) => {
-        event.preventDefault();
-        if (!started || solved.has(stage)) return;
-        const answer = normalize($("answer").value);
-        if (!answer) {
-          $("feedback").textContent = "보기를 선택하거나 암호를 입력해주세요.";
-          return;
-        }
-        if (answer !== rooms[stage].answer) {
-          $("feedback").textContent =
-            "아직 문이 열리지 않아요. 문제를 다시 읽고 도전해보세요.";
-          return;
-        }
-        solved.add(stage);
-        $("feedback").textContent = "";
-        $("answer").value = rooms[stage].answer;
-        $("answer").disabled = true;
-        $("check").disabled = true;
-        $("clear").disabled = true;
-        $("hint").hidden = true;
-        $("hint-box").hidden = true;
-        $("explanation").textContent = rooms[stage].explanation;
-        $("unlock").hidden = false;
-        renderChoices();
-        updateProgress();
-        $("next").focus({ preventScroll: true });
-        $("unlock").scrollIntoView({ behavior: "smooth", block: "nearest" });
-      });
-      $("hint").addEventListener("click", () => {
-        const opening = $("hint-box").hidden;
-        $("hint-box").hidden = !opening;
-        $("hint").setAttribute("aria-expanded", String(opening));
-        $("hint").querySelector("span").textContent = opening
-          ? "힌트 접기"
-          : "막혔나요? 힌트 보기";
-        if (opening) hints.add(stage);
-      });
-      $("next").addEventListener("click", () => {
-        if (!solved.has(stage)) return;
-        if (stage < rooms.length - 1) {
-          stage++;
-          renderRoom(true);
-          return;
-        }
-        finishedAt = performance.now();
-        $("final-time").textContent = updateTimer();
-        $("final-hints").textContent = hints.size;
-        $("final-keys").textContent = `${solved.size} / ${rooms.length}`;
-        $("final-art").src = $("room-art").src;
-        $("game").hidden = true;
-        $("success").hidden = false;
-        $("main-title").textContent = "소중한 저녁을 되찾았어요.";
-        $("main-subtitle").textContent = "열 개의 방을 모두 탈출했습니다.";
-        updateProgress();
-        $("success-title").focus({ preventScroll: true });
-        $("success").scrollIntoView({ behavior: "smooth", block: "start" });
-        celebrate();
-      });
+
       function celebrate() {
         $("confetti").replaceChildren();
         if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -2035,40 +2217,282 @@
         }
         setTimeout(() => $("confetti").replaceChildren(), 4500);
       }
-      function reset() {
-        stage = 0;
+      $("answer").addEventListener("input", () => {
         selected = [];
-        solved = new Set();
-        hints = new Set();
-        startedAt = performance.now();
-        finishedAt = null;
-        started = true;
-        $("game").hidden = false;
-        $("success").hidden = true;
-        $("confetti").replaceChildren();
-        $("main-title").textContent = "오늘의 야근을 탈출하세요.";
-        $("main-subtitle").textContent = "열 개의 암호, 하나의 소중한 저녁.";
-        updateTimer();
-        renderRoom(true);
-      }
-      $("start").addEventListener("click", () => {
-        started = true;
-        startedAt = performance.now();
-        $("intro-dialog").close();
-        $("question-title").focus({ preventScroll: true });
+        $("feedback").textContent = "";
+        renderChoices();
       });
+      $("clear").addEventListener("click", () => {
+        if (pending || solved.has(stage)) return;
+        selected = [];
+        $("answer").value = "";
+        $("feedback").textContent = "";
+        renderChoices();
+        if (!$("answer").readOnly) $("answer").focus();
+      });
+      $("answer-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!started || pending || solved.has(stage) || finishedAt) return;
+        if (!$("answer").value.trim()) {
+          $("feedback").textContent = "보기를 선택하거나 암호를 입력해주세요.";
+          return;
+        }
+        setPending(true);
+        $("feedback").textContent = "";
+        try {
+          const result = await api("answer", {
+            sessionToken,
+            stage,
+            answer: $("answer").value,
+          });
+          applyState(result.state);
+          if (result.correct) showUnlock();
+          else
+            $("feedback").textContent =
+              "아직 문이 열리지 않아요. 문제를 다시 읽고 도전해보세요.";
+        } catch (error) {
+          if (error.code === "STAGE_MISMATCH") {
+            try {
+              const result = await api("state", { sessionToken });
+              applyState(result.state);
+              if (solved.has(stage)) showUnlock();
+              else {
+                stage = result.state.nextStage;
+                renderRoom(true);
+                $("feedback").textContent = "다른 탭의 진행 기록을 반영했어요.";
+              }
+            } catch (recoveryError) {
+              $("feedback").textContent = recoveryError.message;
+            }
+          } else $("feedback").textContent = error.message;
+        } finally {
+          setPending(false);
+        }
+      });
+      $("hint").addEventListener("click", async () => {
+        if (pending || !started || solved.has(stage)) return;
+        if (!$("hint-box").hidden) {
+          $("hint-box").hidden = true;
+          $("hint").setAttribute("aria-expanded", "false");
+          $("hint").querySelector("span").textContent = "막혔나요? 힌트 보기";
+          return;
+        }
+        setPending(true);
+        try {
+          const result = await api("hint", { sessionToken, stage });
+          applyState(result.state);
+          if (solved.has(stage)) {
+            showUnlock();
+            return;
+          }
+          $("hint-box").textContent = result.hint;
+          $("hint-box").hidden = false;
+          $("hint").setAttribute("aria-expanded", "true");
+          $("hint").querySelector("span").textContent = "힌트 접기";
+        } catch (error) {
+          $("feedback").textContent = error.message;
+        } finally {
+          setPending(false);
+        }
+      });
+      $("next").addEventListener("click", () => {
+        if (pending || !solved.has(stage)) return;
+        if (sessionState.completedAt) {
+          showSuccess();
+          return;
+        }
+        stage = sessionState.nextStage;
+        renderRoom(true);
+      });
+      function createToken() {
+        const bytes = crypto.getRandomValues(new Uint8Array(32));
+        return btoa(String.fromCharCode(...bytes))
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
+      }
+      $("entry-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const studentId = $("student-id").value.trim();
+        const name = $("student-name").value.trim();
+        if (!/^[0-9]{5}$/.test(studentId)) {
+          $("entry-error").textContent = "학번은 숫자 5자리로 입력해주세요.";
+          $("student-id").focus();
+          return;
+        }
+        if (
+          !name ||
+          Array.from(name).length > 40 ||
+          /[\u0000-\u001f\u007f]/.test(name)
+        ) {
+          $("entry-error").textContent = "이름을 1~40자로 입력해주세요.";
+          $("student-name").focus();
+          return;
+        }
+        if ($("start").disabled) return;
+        $("start").disabled = true;
+        $("start").textContent = "입장 확인 중…";
+        $("entry-error").textContent = "";
+        try {
+          const storageKey = `work-life-session:${studentId}`;
+          let token;
+          try {
+            token = localStorage.getItem(storageKey) || createToken();
+            localStorage.setItem(storageKey, token);
+          } catch {
+            throw new Error(
+              "진행을 이어가려면 브라우저 저장소가 필요해요. 저장소 사용을 허용한 뒤 다시 시도해주세요.",
+            );
+          }
+          const result = await api("enter", {
+            studentId,
+            name,
+            sessionToken: token,
+          });
+          sessionToken = token;
+          applyState(result.state);
+          $("intro-dialog").close();
+          if (result.state.completedAt) {
+            showSuccess(false);
+            return;
+          }
+          stage = result.state.nextStage;
+          renderRoom();
+          $("question-title").focus({ preventScroll: true });
+          if (stage > 0)
+            $("feedback").textContent =
+              "저장된 진행 기록을 불러왔어요. 플레이 시간도 이어집니다.";
+        } catch (error) {
+          $("entry-error").textContent = error.message;
+        } finally {
+          $("start").disabled = !configured;
+          $("start").textContent = "탈출 시작하기";
+        }
+      });
+      async function loadRealtime() {
+        if (rankingClient) return rankingClient;
+        if (!sdkPromise) {
+          sdkPromise = new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src =
+              "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
+            script.onload = resolve;
+            script.onerror = () =>
+              reject(
+                new Error(
+                  "실시간 연결 도구를 불러오지 못했어요. 새로고침 버튼으로 최신 순위를 확인할 수 있어요.",
+                ),
+              );
+            document.head.append(script);
+          }).catch((error) => {
+            sdkPromise = null;
+            throw error;
+          });
+        }
+        await sdkPromise;
+        rankingClient = window.supabase.createClient(
+          config.supabaseUrl,
+          config.publishableKey,
+          {
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              detectSessionInUrl: false,
+            },
+          },
+        );
+        return rankingClient;
+      }
+      async function refreshRanking() {
+        if (!$("ranking-dialog").open) return;
+        if (rankingBusy) {
+          rankingDirty = true;
+          return;
+        }
+        rankingBusy = true;
+        $("ranking-refresh").disabled = true;
+        $("ranking-error").textContent = "";
+        try {
+          const result = await api("ranking");
+          $("ranking-body").replaceChildren();
+          result.entries.forEach((entry, index) => {
+            const row = document.createElement("tr");
+            for (const value of [
+              String(index + 1),
+              entry.studentId,
+              entry.name,
+              formatTime(Math.floor(entry.elapsedMs / 1000)),
+              String(entry.hintsUsed),
+            ]) {
+              const cell = document.createElement("td");
+              cell.textContent = value;
+              row.append(cell);
+            }
+            $("ranking-body").append(row);
+          });
+          $("ranking-empty").hidden = result.entries.length > 0;
+          $("ranking-updated").textContent =
+            `최근 확인 ${new Date().toLocaleTimeString("ko-KR")}`;
+        } catch (error) {
+          $("ranking-error").textContent = error.message;
+        } finally {
+          rankingBusy = false;
+          $("ranking-refresh").disabled = false;
+          if (rankingDirty) {
+            rankingDirty = false;
+            refreshRanking();
+          }
+        }
+      }
+      async function openRanking() {
+        if ($("ranking-dialog").open) return;
+        $("ranking-dialog").showModal();
+        const generation = ++rankingGeneration;
+        $("ranking-status").textContent = "실시간 연결 중…";
+        const refresh = refreshRanking();
+        try {
+          if (!configured) throw new Error("연결 준비 중입니다.");
+          const client = await loadRealtime();
+          if (!$("ranking-dialog").open || generation !== rankingGeneration)
+            return;
+          rankingChannel = client
+            .channel(`game-ranking-${crypto.randomUUID()}`)
+            .on(
+              "postgres_changes",
+              { event: "INSERT", schema: "public", table: "game_leaderboard" },
+              refreshRanking,
+            )
+            .subscribe((status) => {
+              if (!$("ranking-dialog").open || generation !== rankingGeneration)
+                return;
+              if (status === "SUBSCRIBED") {
+                $("ranking-status").textContent = "실시간으로 갱신됩니다.";
+                refreshRanking();
+              } else if (
+                ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)
+              )
+                $("ranking-status").textContent =
+                  "실시간 연결을 확인 중입니다. 새로고침으로 최신 기록을 확인할 수 있어요.";
+            });
+        } catch (error) {
+          $("ranking-status").textContent = error.message;
+        }
+        await refresh;
+      }
+      $("ranking-dialog").addEventListener("close", () => {
+        rankingGeneration++;
+        if (rankingChannel) {
+          rankingClient.removeChannel(rankingChannel);
+          rankingChannel = null;
+        }
+      });
+      $("ranking").addEventListener("click", openRanking);
+      $("play-again").addEventListener("click", openRanking);
+      $("ranking-refresh").addEventListener("click", refreshRanking);
       $("intro-dialog").addEventListener("cancel", (event) =>
         event.preventDefault(),
       );
       $("help").addEventListener("click", () => $("help-dialog").showModal());
-      $("restart").addEventListener("click", () =>
-        $("restart-dialog").showModal(),
-      );
-      $("confirm-restart").addEventListener("click", () => {
-        $("restart-dialog").close();
-        reset();
-      });
-      $("play-again").addEventListener("click", reset);
       document
         .querySelectorAll("[data-close]")
         .forEach((button) =>
@@ -2078,6 +2502,11 @@
         );
       setInterval(updateTimer, 1000);
       renderRoom();
+      if (!configured) {
+        $("entry-error").textContent =
+          "입장 준비 중입니다. 선생님이 연결을 마친 뒤 다시 접속해주세요.";
+        $("start").disabled = true;
+      }
       $("intro-dialog").showModal();
     </script>
   </body>

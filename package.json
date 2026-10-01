@@ -1,0 +1,12 @@
+{
+  "name": "work-life-escape",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:backend": "node --experimental-strip-types --test tests/backend.test.mjs",
+    "test:frontend": "node --test tests/frontend.test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}
