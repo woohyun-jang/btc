@@ -1173,16 +1173,17 @@
         color: var(--mint);
         border-color: #507b6e;
       }
-      .bgm-entry {
+      .intro-modal-top {
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px 12px;
-        margin: 18px 0;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
       }
-      .bgm-entry small {
-        color: var(--muted);
-        font-size: 12px;
+      .ranking-modal-top {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
       }
       #bgm-status {
         margin: 0;
@@ -1513,7 +1514,17 @@
       </footer>
     </div>
     <dialog id="intro-dialog" aria-labelledby="intro-title">
-      <div class="intro-symbol" aria-hidden="true">💼</div>
+      <div class="intro-modal-top">
+        <div class="intro-symbol" aria-hidden="true">💼</div>
+        <button
+          class="secondary bgm-toggle"
+          type="button"
+          data-bgm
+          aria-pressed="false"
+        >
+          ♪ BGM 켜기
+        </button>
+      </div>
       <p class="eyebrow">당신의 퇴근을 위한 미션</p>
       <h2 id="intro-title">퇴근 1분 전,<br />사무실 문이 잠겼다!</h2>
       <p>
@@ -1540,17 +1551,7 @@
           >시간 제한은 없어요. 차근차근 풀어보세요.
         </li>
       </ul>
-      <div class="bgm-entry">
-        <button
-          class="secondary bgm-toggle"
-          type="button"
-          data-bgm
-          aria-pressed="false"
-        >
-          ♪ BGM 켜기</button
-        ><small>미스터리한 배경 음악과 함께 플레이해보세요.</small>
-        <p id="bgm-status" role="status"></p>
-      </div>
+      <p id="bgm-status" role="status"></p>
       <form id="entry-form" class="entry-form" novalidate>
         <label for="student-id">학번</label>
         <input
@@ -1625,18 +1626,19 @@
       </div>
     </dialog>
     <dialog id="ranking-dialog" aria-labelledby="ranking-title">
-      <button class="icon-button close" data-close aria-label="랭킹 닫기">
-        ×
-      </button>
+      <div class="ranking-modal-top">
+        <button
+          class="secondary bgm-toggle"
+          type="button"
+          data-bgm
+          aria-pressed="false"
+        >
+          ♪ BGM 켜기</button
+        ><button class="icon-button close" data-close aria-label="랭킹 닫기">
+          ×
+        </button>
+      </div>
       <p class="eyebrow">LIVE LEADERBOARD</p>
-      <button
-        class="secondary bgm-toggle"
-        type="button"
-        data-bgm
-        aria-pressed="false"
-      >
-        ♪ BGM 켜기
-      </button>
       <h2 id="ranking-title">오늘의 칼퇴근 랭킹</h2>
       <p class="ranking-description">
         완료까지 걸린 시간이 짧은 순서입니다. 힌트 사용에 시간 벌점은 없어요.
